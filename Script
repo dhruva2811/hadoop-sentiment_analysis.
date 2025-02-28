@@ -1,0 +1,39 @@
+from mrjob.job import MRJob
+import re
+
+class SentimentAnalysis(MRJob):
+    
+    def mapper(self, _, line):
+        # Split the line into fields (assuming CSV format)
+        fields = line.split(",")
+        if len(fields) >= 9:  # Ensure the line has enough fields
+            review_text = fields[9]  # Review text is in the 10th column
+            sentiment = self.analyze_sentiment(review_text)
+            yield sentiment, 1
+    
+    def reducer(self, key, values):
+        # Sum the counts for each sentiment category
+        yield key, sum(values)
+    
+    def analyze_sentiment(self, text):
+        # Simple sentiment analysis based on keywords
+        positive_words = {"good", "great", "excellent", "love", "awesome"}
+        negative_words = {"bad", "poor", "terrible", "hate", "awful"}
+        
+        # Tokenize the text into words
+        words = re.findall(r'\w+', text.lower())
+        
+        # Count positive and negative words
+        positive_count = sum(1 for word in words if word in positive_words)
+        negative_count = sum(1 for word in words if word in negative_words)
+        
+        # Determine sentiment
+        if positive_count > negative_count:
+            return "positive"
+        elif negative_count > positive_count:
+            return "negative"
+        else:
+            return "neutral"
+
+if __name__ == '__main__':
+    SentimentAnalysis.run()
